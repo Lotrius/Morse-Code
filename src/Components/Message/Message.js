@@ -2,7 +2,7 @@
 /* eslint-disable no-await-in-loop */
 import React, { useState, useRef } from "react";
 import morseCode from "../../Morse code/MorseCode";
-import dotDash from "../test";
+import dotDash from "../../Morse code/MorseCodeSoundDict";
 
 const translateMessage = (object, value) => {
   // Translated message
@@ -29,32 +29,49 @@ const translateMessage = (object, value) => {
   return translatedMessage;
 };
 
-async function playMessage(dictionary, dot, dash, message) {
+async function playMessage(message, setPlaying) {
+  // Audio is now playing
+  setPlaying(true);
+
+  // Split the morse code message
   const splitMessage = message.split(/\s/).filter(Boolean);
-  const dots = dotDash["."];
-  const dashs = dotDash["-"];
 
-  for (let i = 0; i < message.length; i += 1) {
-    const currentChar = message.charAt(i);
+  // For every element in the message
+  for (let i = 0; i < splitMessage.length; i += 1) {
+    // Get the current char and the associated audio
+    const currentChar = splitMessage[i];
+    const audio = dotDash[currentChar];
 
+    // If the char is "/", pause, otherwise play the audio
     switch (currentChar) {
-      case ".":
-        dots.play();
-        await new Promise(r => setTimeout(r, dots.duration + 170));
-        break;
-      case "-":
-        dashs.play();
-        await new Promise(r => setTimeout(r, dashs.duration + 277));
+      case "/":
+        await new Promise(r => setTimeout(r, 200));
         break;
       default:
+        audio.play();
         break;
     }
+
+    // Wait for audio to finish playing before moving on
+    while (!audio.ended && currentChar !== "/") {
+      await new Promise(r => setTimeout(r, 1));
+    }
+
+    // So every audio file has the same amount of space in between
+    if (currentChar !== "/") {
+      await new Promise(r => setTimeout(r, 100));
+    }
   }
+
+  // Audio no longer playing
+  setPlaying(false);
 }
 
 const Message = () => {
   // Create state hook that will contain value of message
+  // Create state hook that contains whether audio playing or not
   const [textValue, setValue] = useState("");
+  const [playing, setPlaying] = useState(false);
 
   const translatedMessage = useRef("");
 
@@ -62,9 +79,6 @@ const Message = () => {
   const handleChange = event => {
     setValue(event.target.value);
   };
-
-  const dotAudio = new Audio("/Sounds/e.wav");
-  const dashAudio = new Audio("/Sounds/t.wav");
 
   return (
     <section className="mt3 mb4 ml4 mr4">
@@ -122,13 +136,9 @@ const Message = () => {
               <button
                 className="bg-green"
                 type="button"
+                disabled={playing}
                 onClick={() =>
-                  playMessage(
-                    morseCode,
-                    dotAudio,
-                    dashAudio,
-                    translatedMessage.current.value
-                  )
+                  playMessage(translatedMessage.current.value, setPlaying)
                 }
               >
                 <img
